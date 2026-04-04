@@ -18,10 +18,17 @@
             <div class="card-body">
               <div class="row g-2">
                 <div class="col-md-3">
+                  <label class="form-label">Unidade</label>
+                  <select v-model.number="filters.unidade_id" class="form-select" @change="onUnidadeChange">
+                    <option :value="''">Todas</option>
+                    <option v-for="u in unidades" :key="u.id" :value="u.id">{{ u.nome }}</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
                   <label class="form-label">Setor</label>
                   <select v-model.number="filters.setor_id" class="form-select">
                     <option :value="''">Todos</option>
-                    <option v-for="s in setores" :key="s.id" :value="s.id">{{ s.nome }}</option>
+                    <option v-for="s in setoresFiltrados" :key="s.id" :value="s.id">{{ s.nome }}</option>
                   </select>
                 </div>
                 <div class="col-md-3">
@@ -31,16 +38,7 @@
                     <option v-for="g in gruposProdutos" :key="g.id" :value="g.id">{{ g.nome }}</option>
                   </select>
                 </div>
-                <div class="col-md-2">
-                  <label class="form-label">Por página</label>
-                  <select v-model.number="perPage" class="form-select">
-                    <option :value="25">25</option>
-                    <option :value="50">50</option>
-                    <option :value="100">100</option>
-                    <option :value="200">200</option>
-                  </select>
-                </div>
-                <div class="col-md-4 d-flex align-items-end justify-content-end">
+                <div class="col-md-3 d-flex align-items-end justify-content-end">
                   <button class="btn btn-outline-success me-2" @click="exportExcel" :disabled="estoque.length===0">Exportar Excel</button>
                   <button class="btn btn-outline-danger" @click="exportPdf" :disabled="estoque.length===0">Exportar PDF</button>
                 </div>
@@ -218,6 +216,9 @@
 <script>
 import TemplateAdmin from '@/views/roleAdmin/TemplateAdmin.vue'
 import functionsRelatorios from '@/functions/cad_relatorios.js'
+import functionsPolos from '@/functions/cad_unidades_polos.js'
+import functionsSetores from '@/functions/cad_setores.js'
+import functionsGrupoProduto from '@/functions/cad_grupo_produto.js'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -228,11 +229,10 @@ export default {
   data() {
     return {
       filters: {
+        unidade_id: '',
         setor_id: '',
         grupo_produto_id: '',
       },
-      perPage: 50,
-      page: 1,
       estoque: [],
       totalizadores: {
         total_itens: 0,
@@ -245,18 +245,33 @@ export default {
     }
   },
   mounted() {
+    functionsPolos.listAll(this);
+    functionsSetores.listAll(this);
+    functionsGrupoProduto.listAll(this);
     this.loadEstoque();
   },
   computed: {
+    unidades() {
+      return this.$store.state.listPolos || [];
+    },
     setores() {
-      const polos = this.$store.state.listPolos || [];
-      return polos.filter(s => s !== null && s !== undefined);
+      const setoresData = this.$store.state.listSetoresGerais;
+      if (Array.isArray(setoresData)) return setoresData;
+      if (setoresData?.data) return setoresData.data;
+      return [];
+    },
+    setoresFiltrados() {
+      if (!this.filters.unidade_id) return this.setores;
+      return this.setores.filter(s => s.unidade_id == this.filters.unidade_id);
     },
     gruposProdutos() {
       return this.$store.state.listGrupoProdutos || [];
     }
   },
   methods: {
+    onUnidadeChange() {
+      this.filters.setor_id = '';
+    },
     toggleRow(itemId) {
       this.expandedRows[itemId] = !this.expandedRows[itemId];
     },
@@ -264,10 +279,11 @@ export default {
       this.loading = true;
       try {
         const payloadFilters = {};
+        if (this.filters.unidade_id) payloadFilters.unidade_id = this.filters.unidade_id;
         if (this.filters.setor_id) payloadFilters.setor_id = this.filters.setor_id;
         if (this.filters.grupo_produto_id) payloadFilters.grupo_produto_id = this.filters.grupo_produto_id;
 
-        const result = await functionsRelatorios.listEstoqueReport(this, payloadFilters, this.perPage, this.page);
+        const result = await functionsRelatorios.listEstoqueReport(this, payloadFilters);
         if (result && result.success) {
           this.estoque = result.data || [];
           
@@ -304,10 +320,9 @@ export default {
       }
     },
     resetFilters() {
+      this.filters.unidade_id = '';
       this.filters.setor_id = '';
       this.filters.grupo_produto_id = '';
-      this.perPage = 50;
-      this.page = 1;
       this.loadEstoque();
     },
     formatDate(d) {

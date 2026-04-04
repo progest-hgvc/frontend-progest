@@ -1,24 +1,20 @@
 /**
  * Funções para gerenciamento de relatórios
- * Padrão: POST /relatorios/{recurso}/list com filtros e paginação
+ * Padrão: POST /relatorios/{recurso}/list com filtros (sem paginação)
  */
 
 /**
  * Lista todas as entradas para o relatório
  * @param {Object} content - Contexto do componente Vue (this)
  * @param {Object} filters - Filtros opcionais (date_from, date_to, setor_id, fornecedor_id)
- * @param {Number} perPage - Itens por página (padrão 50)
- * @param {Number} page - Número da página (padrão 1)
  */
-var listEntradasReport = (content, filters = {}, perPage = 50, page = 1) => {
+var listEntradasReport = (content, filters = {}) => {
   console.log("📊 Carregando relatório de entradas: POST /relatorios/entradas/list");
 
   const payload = {
     filters: {
       ...filters,
     },
-    per_page: perPage,
-    page: page,
   };
 
   console.log("📋 Payload:", payload);
@@ -34,17 +30,12 @@ var listEntradasReport = (content, filters = {}, perPage = 50, page = 1) => {
       console.log("✅ Resposta da API - Relatório Entradas:", response.data);
 
       if (response.data && response.data.status) {
-        // Normalizar resposta: backend pode retornar data.data ou data diretamente
-        const paginatedData = response.data.data;
-        const entradas = Array.isArray(paginatedData)
-          ? paginatedData
-          : (paginatedData?.data || []);
+        // Resposta sem paginação: backend retorna array direto em data
+        const entradas = Array.isArray(response.data.data)
+          ? response.data.data
+          : [];
 
-        console.log(
-          `📊 Entradas encontradas: ${entradas.length} de ${
-            paginatedData?.total || entradas.length
-          } total`
-        );
+        console.log(`📊 Entradas encontradas: ${entradas.length} total`);
 
         // Commit no Vuex store
         content.$store.commit("setRelatorioEntradas", entradas);
@@ -52,12 +43,7 @@ var listEntradasReport = (content, filters = {}, perPage = 50, page = 1) => {
         return { 
           success: true, 
           data: entradas,
-          pagination: {
-            total: paginatedData?.total || entradas.length,
-            per_page: paginatedData?.per_page || perPage,
-            current_page: paginatedData?.current_page || page,
-            last_page: paginatedData?.last_page || 1,
-          }
+          total: entradas.length
         };
       } else {
         console.warn("⚠️ Resposta da API sem dados válidos:", response.data);
@@ -91,18 +77,14 @@ var listEntradasReport = (content, filters = {}, perPage = 50, page = 1) => {
  * Lista todas as movimentações para o relatório
  * @param {Object} content - Contexto do componente Vue (this)
  * @param {Object} filters - Filtros opcionais (date_from, date_to, tipo, setor_origem_id, setor_destino_id)
- * @param {Number} perPage - Itens por página (padrão 50)
- * @param {Number} page - Número da página (padrão 1)
  */
-var listMovimentacoesReport = (content, filters = {}, perPage = 50, page = 1) => {
+var listMovimentacoesReport = (content, filters = {}) => {
   console.log("📊 Carregando relatório de movimentações: POST /relatorios/movimentacoes/list");
 
   const payload = {
     filters: {
       ...filters,
     },
-    per_page: perPage,
-    page: page,
   };
 
   console.log("📋 Payload:", payload);
@@ -118,17 +100,12 @@ var listMovimentacoesReport = (content, filters = {}, perPage = 50, page = 1) =>
       console.log("✅ Resposta da API - Relatório Movimentações:", response.data);
 
       if (response.data && response.data.status) {
-        // Normalizar resposta
-        const paginatedData = response.data.data;
-        const movimentacoes = Array.isArray(paginatedData)
-          ? paginatedData
-          : (paginatedData?.data || []);
+        // Resposta sem paginação: backend retorna array direto em data
+        const movimentacoes = Array.isArray(response.data.data)
+          ? response.data.data
+          : [];
 
-        console.log(
-          `📊 Movimentações encontradas: ${movimentacoes.length} de ${
-            paginatedData?.total || movimentacoes.length
-          } total`
-        );
+        console.log(`📊 Movimentações encontradas: ${movimentacoes.length} total`);
 
         // Commit no Vuex store
         content.$store.commit("setRelatorioMovimentacoes", movimentacoes);
@@ -136,12 +113,7 @@ var listMovimentacoesReport = (content, filters = {}, perPage = 50, page = 1) =>
         return { 
           success: true, 
           data: movimentacoes,
-          pagination: {
-            total: paginatedData?.total || movimentacoes.length,
-            per_page: paginatedData?.per_page || perPage,
-            current_page: paginatedData?.current_page || page,
-            last_page: paginatedData?.last_page || 1,
-          }
+          total: movimentacoes.length
         };
       } else {
         console.warn("⚠️ Resposta da API sem dados válidos:", response.data);
@@ -175,18 +147,14 @@ var listMovimentacoesReport = (content, filters = {}, perPage = 50, page = 1) =>
  * Lista todas as saídas para o relatório
  * @param {Object} content - Contexto do componente Vue (this)
  * @param {Object} filters - Filtros opcionais (date_from, date_to, setor_id, fornecedor_id)
- * @param {Number} perPage - Itens por página (padrão 50)
- * @param {Number} page - Número da página (padrão 1)
  */
-var listSaidasReport = (content, filters = {}, perPage = 50, page = 1) => {
+var listSaidasReport = (content, filters = {}) => {
   console.log("📊 Carregando relatório de saídas: POST /relatorios/saidas/list");
 
   const payload = {
     filters: {
       ...filters,
     },
-    per_page: perPage,
-    page: page,
   };
 
   console.log("📋 Payload:", payload);
@@ -202,17 +170,12 @@ var listSaidasReport = (content, filters = {}, perPage = 50, page = 1) => {
       console.log("✅ Resposta da API - Relatório Saídas:", response.data);
 
       if (response.data && response.data.status) {
-        // Normalizar resposta: backend pode retornar data.data ou data diretamente
-        const paginatedData = response.data.data;
-        const saidas = Array.isArray(paginatedData)
-          ? paginatedData
-          : (paginatedData?.data || []);
+        // Resposta sem paginação: backend retorna array direto em data
+        const saidas = Array.isArray(response.data.data)
+          ? response.data.data
+          : [];
 
-        console.log(
-          `📊 Saídas encontradas: ${saidas.length} de ${
-            paginatedData?.total || saidas.length
-          } total`
-        );
+        console.log(`📊 Saídas encontradas: ${saidas.length} total`);
 
         // Commit no Vuex store
         content.$store.commit("setRelatorioSaidas", saidas);
@@ -220,12 +183,7 @@ var listSaidasReport = (content, filters = {}, perPage = 50, page = 1) => {
         return { 
           success: true, 
           data: saidas,
-          pagination: {
-            total: paginatedData?.total || saidas.length,
-            per_page: paginatedData?.per_page || perPage,
-            current_page: paginatedData?.current_page || page,
-            last_page: paginatedData?.last_page || 1,
-          }
+          total: saidas.length
         };
       } else {
         console.warn("⚠️ Resposta da API sem dados válidos:", response.data);
@@ -256,15 +214,13 @@ var listSaidasReport = (content, filters = {}, perPage = 50, page = 1) => {
 };
 
 
-var listSaidasPorDataReport = (content, filters = {}, perPage = 50, page = 1) => {
+var listSaidasPorDataReport = (content, filters = {}) => {
   console.log("📊 Carregando relatório de saídas por data: POST /relatorios/saidas-por-data/list");
 
   const payload = {
     filters: {
       ...filters,
     },
-    per_page: perPage,
-    page: page,
   };
 
   console.log("📋 Payload:", payload);
@@ -280,16 +236,13 @@ var listSaidasPorDataReport = (content, filters = {}, perPage = 50, page = 1) =>
       console.log("✅ Resposta da API - Relatório Saídas por Data:", response.data);
 
       if (response.data && response.data.status) {
-        // Nova estrutura: data é paginada com data.data contendo array de dias
-        const paginatedData = response.data.data;
-        const saidasPorData = paginatedData?.data || [];
+        // Resposta sem paginação: backend retorna array direto em data
+        const saidasPorData = Array.isArray(response.data.data)
+          ? response.data.data
+          : [];
         const periodo = response.data.periodo || null;
 
-        console.log(
-          `📊 Dias com saídas encontrados: ${saidasPorData.length} de ${
-            paginatedData?.total || saidasPorData.length
-          } total`
-        );
+        console.log(`📊 Dias com saídas encontrados: ${saidasPorData.length} total`);
 
         if (periodo) {
           console.log(`📅 Período: ${periodo.data_inicial} até ${periodo.data_final}`);
@@ -302,14 +255,7 @@ var listSaidasPorDataReport = (content, filters = {}, perPage = 50, page = 1) =>
           success: true, 
           data: saidasPorData,
           periodo: periodo,
-          pagination: {
-            total: paginatedData?.total || saidasPorData.length,
-            per_page: paginatedData?.per_page || perPage,
-            current_page: paginatedData?.current_page || page,
-            last_page: paginatedData?.last_page || 1,
-            from: paginatedData?.from || 0,
-            to: paginatedData?.to || 0,
-          }
+          total: saidasPorData.length
         };
       } else {
         console.warn("⚠️ Resposta da API sem dados válidos:", response.data);
@@ -339,15 +285,13 @@ var listSaidasPorDataReport = (content, filters = {}, perPage = 50, page = 1) =>
     });
 };
 
-var listEntradasPorDataReport = (content, filters = {}, perPage = 50, page = 1) => {
+var listEntradasPorDataReport = (content, filters = {}) => {
   console.log("📊 Carregando relatório de entradas por data: POST /relatorios/entradas-por-data/list");
 
   const payload = {
     filters: {
       ...filters,
     },
-    per_page: perPage,
-    page: page,
   };
 
   console.log("📋 Payload:", payload);
@@ -363,16 +307,13 @@ var listEntradasPorDataReport = (content, filters = {}, perPage = 50, page = 1) 
       console.log("✅ Resposta da API - Relatório Entradas por Data:", response.data);
 
       if (response.data && response.data.status) {
-        // Nova estrutura: data é paginada com data.data contendo array de dias
-        const paginatedData = response.data.data;
-        const entradasPorData = paginatedData?.data || [];
+        // Resposta sem paginação: backend retorna array direto em data
+        const entradasPorData = Array.isArray(response.data.data)
+          ? response.data.data
+          : [];
         const periodo = response.data.periodo || null;
 
-        console.log(
-          `📊 Dias com entradas encontrados: ${entradasPorData.length} de ${
-            paginatedData?.total || entradasPorData.length
-          } total`
-        );
+        console.log(`📊 Dias com entradas encontrados: ${entradasPorData.length} total`);
 
         if (periodo) {
           console.log(`📅 Período: ${periodo.data_inicial} até ${periodo.data_final}`);
@@ -385,14 +326,7 @@ var listEntradasPorDataReport = (content, filters = {}, perPage = 50, page = 1) 
           success: true, 
           data: entradasPorData,
           periodo: periodo,
-          pagination: {
-            total: paginatedData?.total || entradasPorData.length,
-            per_page: paginatedData?.per_page || perPage,
-            current_page: paginatedData?.current_page || page,
-            last_page: paginatedData?.last_page || 1,
-            from: paginatedData?.from || 0,
-            to: paginatedData?.to || 0,
-          }
+          total: entradasPorData.length
         };
       } else {
         console.warn("⚠️ Resposta da API sem dados válidos:", response.data);
@@ -423,15 +357,13 @@ var listEntradasPorDataReport = (content, filters = {}, perPage = 50, page = 1) 
 };
 
 
-var listEstoqueReport = (content, filters = {}, perPage = 50, page = 1) => {
+var listEstoqueReport = (content, filters = {}) => {
   console.log("📊 Carregando relatório de estoque: POST /relatorios/estoque/list");
 
   const payload = {
     filters: {
       ...filters,
     },
-    per_page: perPage,
-    page: page,
   };
 
   console.log("📋 Payload:", payload);
@@ -447,11 +379,10 @@ var listEstoqueReport = (content, filters = {}, perPage = 50, page = 1) => {
       console.log("✅ Resposta da API - Relatório Estoque:", response.data);
 
       if (response.data && response.data.status) {
-        // Normalizar resposta: backend pode retornar data.data ou data diretamente
-        const paginatedData = response.data.data;
-        const estoque = Array.isArray(paginatedData)
-          ? paginatedData
-          : (paginatedData?.data || []);
+        // Resposta sem paginação: backend retorna array direto em data
+        const estoque = Array.isArray(response.data.data)
+          ? response.data.data
+          : [];
 
         // Capturar totalizadores da resposta
         const totalizadores = response.data.totalizadores || {
@@ -461,11 +392,7 @@ var listEstoqueReport = (content, filters = {}, perPage = 50, page = 1) => {
           total_abaixo_minimo: 0
         };
 
-        console.log(
-          `📊 Itens de estoque encontrados: ${estoque.length} de ${
-            paginatedData?.total || estoque.length
-          } total`
-        );
+        console.log(`📊 Itens de estoque encontrados: ${estoque.length} total`);
         console.log(`📈 Totalizadores:`, totalizadores);
 
         // Commit no Vuex store
@@ -475,12 +402,7 @@ var listEstoqueReport = (content, filters = {}, perPage = 50, page = 1) => {
           success: true, 
           data: estoque,
           totalizadores: totalizadores,
-          pagination: {
-            total: paginatedData?.total || estoque.length,
-            per_page: paginatedData?.per_page || perPage,
-            current_page: paginatedData?.current_page || page,
-            last_page: paginatedData?.last_page || 1,
-          }
+          total: estoque.length
         };
       } else {
         console.warn("⚠️ Resposta da API sem dados válidos:", response.data);
@@ -511,6 +433,77 @@ var listEstoqueReport = (content, filters = {}, perPage = 50, page = 1) => {
 };
 
 /**
+ * Lista todos os usuários para o relatório
+ * @param {Object} content - Contexto do componente Vue (this)
+ * @param {Object} filters - Filtros opcionais (status, tipo_vinculo, setor_id, perfil)
+ */
+var listUsuariosReport = (content, filters = {}) => {
+  console.log("📊 Carregando relatório de usuários: POST /relatorios/usuarios/list");
+
+  const payload = {
+    filters: {
+      ...filters,
+    },
+  };
+
+  console.log("📋 Payload:", payload);
+
+  return content.$axios
+    .post("/relatorios/usuarios/list", payload, {
+      headers: {
+        Authorization: "Bearer " + content.$store.getters.getUserToken,
+        "Content-Type": "application/json",
+      },
+    })
+    .then((response) => {
+      console.log("✅ Resposta da API - Relatório Usuários:", response.data);
+
+      if (response.data && response.data.status) {
+        // Resposta sem paginação: backend retorna array direto em data
+        const usuarios = Array.isArray(response.data.data)
+          ? response.data.data
+          : [];
+
+        console.log(`📊 Usuários encontrados: ${usuarios.length} total`);
+
+        // Commit no Vuex store (opcional)
+        content.$store.commit("setRelatorioUsuarios", usuarios);
+        
+        return { 
+          success: true, 
+          data: usuarios,
+          total: usuarios.length,
+          totalizadores: response.data.totalizadores || null
+        };
+      } else {
+        console.warn("⚠️ Resposta da API sem dados válidos:", response.data);
+        content.$store.commit("setRelatorioUsuarios", []);
+        return { success: false, data: [], error: response.data.message };
+      }
+    })
+    .catch((error) => {
+      console.error("❌ Erro ao carregar relatório de usuários:", error);
+      console.error("Resposta de erro:", error.response?.data);
+
+      // Notificação de erro
+      try {
+        if (content.$toastr && content.$toastr.e) {
+          const mensagem =
+            error.response?.data?.message ||
+            error.response?.data?.error ||
+            "Erro ao carregar relatório de usuários";
+          content.$toastr.e(mensagem);
+        }
+      } catch (e) {
+        console.warn("Erro ao exibir notificação:", e);
+      }
+
+      content.$store.commit("setRelatorioUsuarios", []);
+      return { success: false, data: [], error };
+    });
+};
+
+/**
  * Exporta o módulo com os métodos públicos
  */
 export default {
@@ -520,4 +513,5 @@ export default {
   listSaidasPorDataReport,
   listEntradasPorDataReport,
   listEstoqueReport,
+  listUsuariosReport,
 };

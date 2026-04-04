@@ -26,21 +26,20 @@
                   <input type="date" v-model="filters.date_to" class="form-control" />
                 </div>
                 <div class="col-md-2">
-                  <label class="form-label">Setor</label>
-                  <select v-model.number="filters.setor_id" class="form-select">
-                    <option :value="''">Todos</option>
-                    <option v-for="s in setores" :key="s.id" :value="s.id">{{ s.nome }}</option>
+                  <label class="form-label">Unidade</label>
+                  <select v-model.number="filters.unidade_id" class="form-select" @change="onUnidadeChange">
+                    <option :value="''">Todas</option>
+                    <option v-for="u in unidades" :key="u.id" :value="u.id">{{ u.nome }}</option>
                   </select>
                 </div>
                 <div class="col-md-2">
-                  <label class="form-label">Por página</label>
-                  <select v-model.number="perPage" class="form-select">
-                    <option :value="25">25</option>
-                    <option :value="50">50</option>
-                    <option :value="100">100</option>
+                  <label class="form-label">Setor</label>
+                  <select v-model.number="filters.setor_id" class="form-select">
+                    <option :value="''">Todos</option>
+                    <option v-for="s in setoresFiltrados" :key="s.id" :value="s.id">{{ s.nome }}</option>
                   </select>
                 </div>
-                <div class="col-md-4 d-flex align-items-end justify-content-end">
+                <div class="col-md-2 d-flex align-items-end justify-content-end">
                   <button class="btn btn-outline-success me-2" @click="exportExcel" :disabled="exits.length===0">Exportar Excel</button>
                   <button class="btn btn-outline-danger" @click="exportPdf" :disabled="exits.length===0">Exportar PDF</button>
                 </div>
@@ -54,15 +53,15 @@
               <div v-else>
                 <div class="mb-3">Total de saídas: <strong>{{ exits.length }}</strong></div>
                 <div class="table-responsive">
-                  <table class="table table-striped">
+                  <table class="table table-striped table-hover">
                     <thead>
                       <tr>
                         <th style="width: 50px;"></th>
                         <th>ID</th>
                         <th>Data</th>
-                        <th>Nota Fiscal</th>
-                        <th>Fornecedor</th>
-                        <th>Setor</th>
+                        <th>Setor Origem</th>
+                        <th>Setor Destino</th>
+                        <th>Status</th>
                         <th>Total Itens</th>
                       </tr>
                     </thead>
@@ -71,53 +70,79 @@
                         <!-- Linha principal da saída -->
                         <tr class="saida-row" @click="toggleRow(e.id)" style="cursor: pointer;">
                           <td>
-                            <span class="material-icons expand-icon" :class="{ 'expanded': expandedRows[e.id] }">
-                              {{ expandedRows[e.id] ? 'expand_more' : 'chevron_right' }}
-                            </span>
+                            <span v-if="expandedRows[e.id]">▼</span>
+                            <span v-else>▶</span>
                           </td>
                           <td>{{ e.id }}</td>
-                          <td>{{ formatDate(e.created_at) }}</td>
-                          <td>{{ e.nota_fiscal || '-' }}</td>
-                          <td>{{ formatFornecedor(e.fornecedor) }}</td>
-                          <td>{{ e.setor?.nome || '-' }}</td>
+                          <td>{{ formatDateTime(e.data_hora || e.created_at) }}</td>
+                          <td>
+                            <div class="text-dark fw-semibold">{{ e.setor_origem?.nome || '-' }}</div>
+                            <small class="text-muted">{{ e.setor_origem?.unidade?.nome || '' }}</small>
+                          </td>
+                          <td>
+                            <div class="text-dark fw-semibold">{{ e.setor_destino?.nome || '-' }}</div>
+                            <small class="text-muted">{{ e.setor_destino?.unidade?.nome || '' }}</small>
+                          </td>
+                          <td>
+                            <span class="badge" :class="getStatusClass(e.status_solicitacao)">
+                              {{ getStatusLabel(e.status_solicitacao) }}
+                            </span>
+                          </td>
                           <td>
                             <span class="badge bg-info">{{ e.itens?.length || 0 }} itens</span>
                           </td>
                         </tr>
                         
-                        <!-- Linha expansível com tabela de produtos -->
+                        <!-- Linha expansível com informações detalhadas e tabela de produtos -->
                         <tr v-if="expandedRows[e.id]" class="expanded-content">
-                          <td colspan="7" class="p-0">
-                            <div class="produtos-container">
-                              <table class="table table-sm mb-0">
-                                <thead class="table-light">
-                                  <tr>
-                                    <th style="width: 100px;">Quantidade</th>
-                                    <th>Produto</th>
-                                    <th style="width: 120px;">Cód. SIMPRAS</th>
-                                    <th style="width: 120px;">Cód. Barras</th>
-                                    <th style="width: 100px;">Lote</th>
-                                    <th style="width: 110px;">Fabricação</th>
-                                    <th style="width: 110px;">Vencimento</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  <tr v-if="!e.itens || e.itens.length === 0">
-                                    <td colspan="7" class="text-center text-muted">Nenhum produto nesta saída</td>
-                                  </tr>
-                                  <tr v-else v-for="(item, idx) in e.itens" :key="idx">
-                                    <td>
-                                      <span class="badge bg-secondary">{{ item.quantidade }}</span>
-                                    </td>
-                                    <td class="fw-semibold">{{ item.produto?.nome || `Produto #${item.produto_id}` }}</td>
-                                    <td class="text-muted small">{{ item.produto?.codigo_simpras || '-' }}</td>
-                                    <td class="text-muted small">{{ item.produto?.codigo_barras || '-' }}</td>
-                                    <td class="text-muted small">{{ item.lote || '-' }}</td>
-                                    <td class="text-muted small">{{ formatDate(item.data_fabricacao) }}</td>
-                                    <td class="text-muted small">{{ formatDate(item.data_vencimento) }}</td>
-                                  </tr>
-                                </tbody>
-                              </table>
+                          <td colspan="7" class="p-0 bg-light">
+                            <div class="p-3">
+                              <!-- Informações adicionais -->
+                              <div class="row mb-3" v-if="e.observacao || e.aprovador">
+                                <div class="col-md-12" v-if="e.observacao">
+                                  <strong>Observação:</strong> {{ e.observacao }}
+                                </div>
+                                <div class="col-md-6" v-if="e.aprovador">
+                                  <strong>Aprovador:</strong> {{ e.aprovador?.name || 'ID: ' + e.aprovador_usuario_id }}
+                                </div>
+                              </div>
+                              
+                              <!-- Tabela de produtos -->
+                              <div class="produtos-container">
+                                <table class="table table-sm table-bordered bg-white mb-0">
+                                  <thead class="table-secondary">
+                                    <tr>
+                                      <th style="width: 90px;">Qtd. Solicitada</th>
+                                      <th style="width: 90px;">Qtd. Liberada</th>
+                                      <th>Produto</th>
+                                      <th style="width: 120px;">Cód. SIMPRAS</th>
+                                      <th style="width: 120px;">Cód. Barras</th>
+                                      <th style="width: 100px;">Lote</th>
+                                      <th style="width: 110px;">Fabricação</th>
+                                      <th style="width: 110px;">Vencimento</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <tr v-if="!e.itens || e.itens.length === 0">
+                                      <td colspan="8" class="text-center text-muted">Nenhum produto nesta saída</td>
+                                    </tr>
+                                    <tr v-else v-for="(item, idx) in e.itens" :key="idx">
+                                      <td>
+                                        <span class="badge bg-primary">{{ item.quantidade_solicitada || 0 }}</span>
+                                      </td>
+                                      <td>
+                                        <span class="badge bg-success">{{ item.quantidade_liberada || 0 }}</span>
+                                      </td>
+                                      <td class="fw-semibold">{{ item.produto?.nome || `Produto #${item.produto_id}` }}</td>
+                                      <td class="text-muted small">{{ item.produto?.codigo_simpras || '-' }}</td>
+                                      <td class="text-muted small">{{ item.produto?.codigo_barras || '-' }}</td>
+                                      <td class="text-muted small">{{ item.lote || '-' }}</td>
+                                      <td class="text-muted small">{{ formatDate(item.data_fabricacao) }}</td>
+                                      <td class="text-muted small">{{ formatDate(item.data_vencimento) }}</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -138,6 +163,8 @@
 <script>
 import TemplateAdmin from '@/views/roleAdmin/TemplateAdmin.vue'
 import functionsRelatorios from '@/functions/cad_relatorios.js'
+import functionsPolos from '@/functions/cad_unidades_polos.js'
+import functionsSetores from '@/functions/cad_setores.js'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -151,25 +178,38 @@ export default {
       filters: {
         date_from: hoje,
         date_to: hoje,
+        unidade_id: '',
         setor_id: '',
       },
-      perPage: 50,
-      page: 1,
       exits: [],
       loading: false,
       expandedRows: {}, // Controla quais linhas estão expandidas
     }
   },
   mounted() {
+    functionsPolos.listAll(this);
+    functionsSetores.listAll(this);
     this.loadExits();
   },
   computed: {
+    unidades() {
+      return this.$store.state.listPolos || [];
+    },
     setores() {
-      const polos = this.$store.state.listPolos || [];
-      return polos.filter(s => s !== null && s !== undefined);
+      const setoresData = this.$store.state.listSetoresGerais;
+      if (Array.isArray(setoresData)) return setoresData;
+      if (setoresData?.data) return setoresData.data;
+      return [];
+    },
+    setoresFiltrados() {
+      if (!this.filters.unidade_id) return this.setores;
+      return this.setores.filter(s => s.unidade_id == this.filters.unidade_id);
     }
   },
   methods: {
+    onUnidadeChange() {
+      this.filters.setor_id = '';
+    },
     getTodayDate() {
       const hoje = new Date();
       const ano = hoje.getFullYear();
@@ -180,14 +220,40 @@ export default {
     toggleRow(saidaId) {
       this.expandedRows[saidaId] = !this.expandedRows[saidaId];
     },
-    formatFornecedor(fornecedor) {
-      if (!fornecedor) return '-';
-      const cnpj = fornecedor.cnpj || '';
-      const razao = fornecedor.razao_social_nome || fornecedor.razao_social || fornecedor.nome || '';
-      if (cnpj && razao) {
-        return `${cnpj} - ${razao}`;
-      }
-      return razao || cnpj || '-';
+    getStatusClass(status) {
+      const statusMap = {
+        'A': 'bg-success',      // Aprovado
+        'P': 'bg-warning',      // Pendente
+        'R': 'bg-danger',       // Rejeitado
+        'C': 'bg-secondary',    // Cancelado
+        'X': 'bg-dark'          // Excluído
+      };
+      return statusMap[status] || 'bg-secondary';
+    },
+    getStatusLabel(status) {
+      const labelMap = {
+        'A': 'Aprovado',
+        'P': 'Pendente',
+        'R': 'Rejeitado',
+        'C': 'Cancelado',
+        'X': 'Excluído'
+      };
+      return labelMap[status] || status || 'N/A';
+    },
+    formatDateTime(dt) {
+      if (!dt) return '-';
+      const str = String(dt).replace(' ', 'T');
+      const [datePart, timePart] = str.split('T');
+      const [ano, mes, dia] = datePart.split('-');
+      const time = timePart ? timePart.slice(0, 5) : '';
+      return `${dia}/${mes}/${ano}${time ? ' ' + time : ''}`;
+    },
+    formatDate(d) {
+      if (!d) return '-';
+      const str = String(d).split('T')[0];
+      const parts = str.split('-');
+      if (parts.length<3) return d;
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
     },
     async loadExits() {
       this.loading = true;
@@ -195,9 +261,10 @@ export default {
         const payloadFilters = {};
         if (this.filters.date_from) payloadFilters.date_from = this.filters.date_from;
         if (this.filters.date_to) payloadFilters.date_to = this.filters.date_to;
+        if (this.filters.unidade_id) payloadFilters.unidade_id = this.filters.unidade_id;
         if (this.filters.setor_id) payloadFilters.setor_id = this.filters.setor_id;
 
-        const result = await functionsRelatorios.listSaidasReport(this, payloadFilters, this.perPage, this.page);
+        const result = await functionsRelatorios.listSaidasReport(this, payloadFilters);
         if (result && result.success) {
           this.exits = result.data || [];
           // Expandir todas as linhas por padrão
@@ -219,9 +286,8 @@ export default {
       const hoje = this.getTodayDate();
       this.filters.date_from = hoje;
       this.filters.date_to = hoje;
+      this.filters.unidade_id = '';
       this.filters.setor_id = '';
-      this.perPage = 50;
-      this.page = 1;
       this.loadExits();
     },
     formatDate(d) {
@@ -238,7 +304,7 @@ export default {
       const data = [];
       
       // Cabeçalho
-      data.push(['ID','Data','Nota Fiscal','Fornecedor','Setor','Qtd','Produto','Cód.SIMPRAS','Cód.Barras','Lote','Fabricação','Vencimento']);
+      data.push(['ID','Data','Setor Origem','Unidade Origem','Setor Destino','Unidade Destino','Status','Qtd.Sol.','Qtd.Lib.','Produto','Cód.SIMPRAS','Cód.Barras','Lote','Fabricação','Vencimento']);
       
       // Dados
       for (const e of this.exits) {
@@ -246,11 +312,14 @@ export default {
           e.itens.forEach(item => {
             data.push([
               e.id,
-              this.formatDate(e.created_at),
-              e.nota_fiscal || '',
-              this.formatFornecedor(e.fornecedor),
-              e.setor?.nome || '',
-              item.quantidade || '',
+              this.formatDateTime(e.data_hora || e.created_at),
+              e.setor_origem?.nome || '',
+              e.setor_origem?.unidade?.nome || '',
+              e.setor_destino?.nome || '',
+              e.setor_destino?.unidade?.nome || '',
+              this.getStatusLabel(e.status_solicitacao),
+              item.quantidade_solicitada || '',
+              item.quantidade_liberada || '',
               item.produto?.nome || `Produto #${item.produto_id}`,
               item.produto?.codigo_simpras || '',
               item.produto?.codigo_barras || '',
@@ -262,10 +331,13 @@ export default {
         } else {
           data.push([
             e.id,
-            this.formatDate(e.created_at),
-            e.nota_fiscal || '',
-            this.formatFornecedor(e.fornecedor),
-            e.setor?.nome || '',
+            this.formatDateTime(e.data_hora || e.created_at),
+            e.setor_origem?.nome || '',
+            e.setor_origem?.unidade?.nome || '',
+            e.setor_destino?.nome || '',
+            e.setor_destino?.unidade?.nome || '',
+            this.getStatusLabel(e.status_solicitacao),
+            '',
             '',
             'Sem itens',
             '',
@@ -285,11 +357,14 @@ export default {
       // Ajustar largura das colunas
       const colWidths = [
         { wch: 8 },  // ID
-        { wch: 12 }, // Data
-        { wch: 18 }, // Nota Fiscal
-        { wch: 35 }, // Fornecedor
-        { wch: 20 }, // Setor
-        { wch: 8 },  // Qtd
+        { wch: 16 }, // Data
+        { wch: 25 }, // Setor Origem
+        { wch: 25 }, // Unidade Origem
+        { wch: 25 }, // Setor Destino
+        { wch: 25 }, // Unidade Destino
+        { wch: 12 }, // Status
+        { wch: 10 }, // Qtd.Sol.
+        { wch: 10 }, // Qtd.Lib.
         { wch: 30 }, // Produto
         { wch: 15 }, // Cód.SIMPRAS
         { wch: 15 }, // Cód.Barras
@@ -323,30 +398,28 @@ export default {
           e.itens.forEach((item, idx) => {
             tableData.push([
               idx === 0 ? e.id : '',
-              idx === 0 ? this.formatDate(e.created_at) : '',
-              idx === 0 ? (e.nota_fiscal || '-') : '',
-              idx === 0 ? this.formatFornecedor(e.fornecedor) : '',
-              idx === 0 ? (e.setor?.nome || '-') : '',
-              item.quantidade || '',
+              idx === 0 ? this.formatDateTime(e.data_hora || e.created_at) : '',
+              idx === 0 ? (e.setor_origem?.nome || '-') : '',
+              idx === 0 ? (e.setor_destino?.nome || '-') : '',
+              idx === 0 ? this.getStatusLabel(e.status_solicitacao) : '',
+              item.quantidade_solicitada || '',
+              item.quantidade_liberada || '',
               item.produto?.nome || `Produto #${item.produto_id}`,
               item.produto?.codigo_simpras || '',
-              item.produto?.codigo_barras || '',
               item.lote || '',
-              this.formatDate(item.data_fabricacao),
               this.formatDate(item.data_vencimento)
             ]);
           });
         } else {
           tableData.push([
             e.id,
-            this.formatDate(e.created_at),
-            e.nota_fiscal || '-',
-            this.formatFornecedor(e.fornecedor),
-            e.setor?.nome || '-',
+            this.formatDateTime(e.data_hora || e.created_at),
+            e.setor_origem?.nome || '-',
+            e.setor_destino?.nome || '-',
+            this.getStatusLabel(e.status_solicitacao),
+            '',
             '',
             'Sem itens',
-            '',
-            '',
             '',
             '',
             ''
@@ -357,24 +430,23 @@ export default {
       // Gerar tabela
       autoTable(doc, {
         startY: 28,
-        head: [['ID', 'Data', 'NF', 'Fornecedor', 'Setor', 'Qtd', 'Produto', 'Cod.SIMPRAS', 'Cod.Barras', 'Lote', 'Fabric.', 'Venc.']],
+        head: [['ID', 'Data', 'Setor Origem', 'Setor Destino', 'Status', 'Qtd.Sol', 'Qtd.Lib', 'Produto', 'Cod.SIMPRAS', 'Lote', 'Venc.']],
         body: tableData,
         theme: 'striped',
         headStyles: { fillColor: [13, 110, 253], fontSize: 8, fontStyle: 'bold' },
         bodyStyles: { fontSize: 7 },
         columnStyles: {
-          0: { cellWidth: 10 },
-          1: { cellWidth: 18 },
-          2: { cellWidth: 20 },
-          3: { cellWidth: 50 },
-          4: { cellWidth: 30 },
-          5: { cellWidth: 12 },
-          6: { cellWidth: 45 },
-          7: { cellWidth: 20 },
-          8: { cellWidth: 20 },
-          9: { cellWidth: 18 },
-          10: { cellWidth: 16 },
-          11: { cellWidth: 16 }
+          0: { cellWidth: 10 },  // ID
+          1: { cellWidth: 25 },  // Data
+          2: { cellWidth: 35 },  // Setor Origem
+          3: { cellWidth: 35 },  // Setor Destino
+          4: { cellWidth: 18 },  // Status
+          5: { cellWidth: 15 },  // Qtd.Sol
+          6: { cellWidth: 15 },  // Qtd.Lib
+          7: { cellWidth: 50 },  // Produto
+          8: { cellWidth: 22 },  // Cod.SIMPRAS
+          9: { cellWidth: 20 },  // Lote
+          10: { cellWidth: 18 }  // Venc.
         },
         margin: { left: 14, right: 14 },
         didDrawPage: (data) => {

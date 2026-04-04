@@ -82,6 +82,10 @@ export default createStore({
     relatorioSaidasPorData: [],
     relatorioEntradasPorData: [],
     relatorioEstoque: [],
+    relatorioUsuarios: [],
+
+    // Listas auxiliares
+    listTiposVinculo: [],
 
     // UI / Filtros
     searchFilters: [],
@@ -361,6 +365,17 @@ export default createStore({
     },
     clearRelatorioEstoque(state) {
       state.relatorioEstoque = [];
+    },
+
+    setRelatorioUsuarios(state, usuarios) {
+      state.relatorioUsuarios = usuarios || [];
+    },
+    clearRelatorioUsuarios(state) {
+      state.relatorioUsuarios = [];
+    },
+
+    setListTiposVinculo(state, tiposVinculo) {
+      state.listTiposVinculo = tiposVinculo || [];
     },
   },
   actions: {

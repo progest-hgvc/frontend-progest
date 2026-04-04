@@ -29,19 +29,26 @@
                   <label class="form-label">Tipo</label>
                   <select v-model="filters.tipo" class="form-select">
                     <option value="">Todos</option>
-                    <option value="transferencia">Transferência</option>
-                    <option value="saida">Saída</option>
-                    <option value="devolucao">Devolução</option>
+                    <option value="T">Transferência</option>
+                    <option value="S">Saída</option>
+                    <option value="D">Devolução</option>
+                  </select>
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label">Unidade</label>
+                  <select v-model.number="filters.unidade_id" class="form-select" @change="onUnidadeChange">
+                    <option :value="''">Todas</option>
+                    <option v-for="u in unidades" :key="u.id" :value="u.id">{{ u.nome }}</option>
                   </select>
                 </div>
                 <div class="col-md-2">
                   <label class="form-label">Setor</label>
                   <select v-model.number="filters.setor_id" class="form-select">
                     <option :value="''">Todos</option>
-                    <option v-for="s in setores" :key="s.id" :value="s.id">{{ s.nome }}</option>
+                    <option v-for="s in setoresFiltrados" :key="s.id" :value="s.id">{{ s.nome }}</option>
                   </select>
                 </div>
-                <div class="col-md-4 d-flex align-items-end justify-content-end">
+                <div class="col-md-2 d-flex align-items-end justify-content-end">
                   <button class="btn btn-outline-success me-2" @click="exportExcel" :disabled="movimentacoes.length===0">Exportar Excel</button>
                   <button class="btn btn-outline-danger" @click="exportPdf" :disabled="movimentacoes.length===0">Exportar PDF</button>
                 </div>
@@ -157,6 +164,8 @@
 <script>
 import TemplateAdmin from '@/views/roleAdmin/TemplateAdmin.vue'
 import functionsRelatorios from '@/functions/cad_relatorios.js'
+import functionsPolos from '@/functions/cad_unidades_polos.js'
+import functionsSetores from '@/functions/cad_setores.js'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -171,21 +180,37 @@ export default {
         date_from: hoje,
         date_to: hoje,
         tipo: '',
+        unidade_id: '',
         setor_id: '',
       },
-      perPage: 50,
-      page: 1,
       movimentacoes: [],
       loading: false,
       expandedRows: {}, // Controla quais linhas estão expandidas
     }
   },
   mounted() {
+    functionsPolos.listAll(this);
+    functionsSetores.listAll(this);
     this.loadMovimentacoes();
   },
   computed: {
-    setores() {
+    unidades() {
       return this.$store.state.listPolos || [];
+    },
+    setores() {
+      const setoresData = this.$store.state.listSetoresGerais;
+      if (Array.isArray(setoresData)) {
+        return setoresData;
+      } else if (setoresData?.data && Array.isArray(setoresData.data)) {
+        return setoresData.data;
+      }
+      return [];
+    },
+    setoresFiltrados() {
+      if (!this.filters.unidade_id) {
+        return this.setores;
+      }
+      return this.setores.filter(s => s.unidade_id == this.filters.unidade_id);
     }
   },
   methods: {
@@ -199,6 +224,10 @@ export default {
     toggleRow(movimentacaoId) {
       this.expandedRows[movimentacaoId] = !this.expandedRows[movimentacaoId];
     },
+    onUnidadeChange() {
+      // Limpa o filtro de setor quando muda a unidade
+      this.filters.setor_id = '';
+    },
     async loadMovimentacoes() {
       this.loading = true;
       try {
@@ -206,9 +235,10 @@ export default {
         if (this.filters.date_from) payloadFilters.date_from = this.filters.date_from;
         if (this.filters.date_to) payloadFilters.date_to = this.filters.date_to;
         if (this.filters.tipo) payloadFilters.tipo = this.filters.tipo;
+        if (this.filters.unidade_id) payloadFilters.unidade_id = this.filters.unidade_id;
         if (this.filters.setor_id) payloadFilters.setor_id = this.filters.setor_id;
 
-        const result = await functionsRelatorios.listMovimentacoesReport(this, payloadFilters, this.perPage, this.page);
+        const result = await functionsRelatorios.listMovimentacoesReport(this, payloadFilters);
         if (result && result.success) {
           this.movimentacoes = result.data || [];
           // Expandir todas as linhas por padrão
@@ -231,9 +261,8 @@ export default {
       this.filters.date_from = hoje;
       this.filters.date_to = hoje;
       this.filters.tipo = '';
+      this.filters.unidade_id = '';
       this.filters.setor_id = '';
-      this.perPage = 50;
-      this.page = 1;
       this.loadMovimentacoes();
     },
     formatDate(d) {
