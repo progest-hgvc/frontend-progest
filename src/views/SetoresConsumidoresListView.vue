@@ -107,7 +107,6 @@ import TemplateAdmin from "@/views/roleAdmin/TemplateAdmin.vue";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Badge } from "@/components/ui/badge";
 import functionsEstoque from "@/functions/cad_estoque"; // Importar função de estoque
 
 const router = useRouter();
@@ -159,9 +158,13 @@ const loadSetoresConsumidores = async () => {
       // 2. Filtrar setores que possuem estoque
       loadingMessage.value = "Verificando disponibilidade de estoque...";
 
-      const setoresComEstoque = [];
       const promises = todosSetores.map(async (setor) => {
         try {
+          // Quando o backend já informa o indicador, ele é a fonte de verdade.
+          if (Object.prototype.hasOwnProperty.call(setor, "estoque")) {
+            return setor.estoque ? setor : null;
+          }
+
           // Precisamos checar o estoque de cada setor.
           // Usaremos uma chamada leve ou a listEstoqueUnidade já existente.
           // Como listEstoqueUnidade espera um 'content' complexo, vamos simular ou chamar direto via axios se preferir
@@ -186,7 +189,15 @@ const loadSetoresConsumidores = async () => {
             setor.id,
           );
 
-          if (result && result.success && result.data && result.data.estoque) {
+          const success = Boolean(result?.success ?? result?.status);
+          const estoqueRaw = result?.data;
+          const estoqueList = Array.isArray(estoqueRaw)
+            ? estoqueRaw
+            : Array.isArray(estoqueRaw?.estoque)
+              ? estoqueRaw.estoque
+              : [];
+
+          if (success && estoqueList.length > 0) {
             // Verifica se tem itens no estoque
             // Pode ser estoque.length > 0 ou verificar quantidades
             // Assumindo: Se tem registros na tabela estoque, considera válido.
@@ -198,9 +209,7 @@ const loadSetoresConsumidores = async () => {
             // Antes: const temItemComQuantidade = result.data.estoque.some(item => item.quantidade_atual > 0);
 
             // Agora: Basta ter itens cadastrados no estoque.
-            if (result.data.estoque.length > 0) {
-              return setor;
-            }
+            return setor;
           }
         } catch (err) {
           console.warn(`Erro ao verificar estoque do setor ${setor.nome}`, err);
