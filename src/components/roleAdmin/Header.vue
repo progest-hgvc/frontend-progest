@@ -85,7 +85,7 @@ const displayTitle = computed(() => {
     estoques: "Estoques",
     fornecedores: "Fornecedores",
   };
-  return titleMap[route.name] || "Sistema ProGest";
+  return titleMap[route.name] || "Sistema ProGest HGVC";
 });
 
 const unidadeNomeAtual = computed(() => {

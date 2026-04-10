@@ -23,6 +23,11 @@ const props = defineProps({
 });
 
 const store = useStore();
+const user = computed(() => store.state.user || {});
+const isAdmin = computed(() => {
+  if (user.value.email === "admin@admin.com") return true;
+  return !!user.value.is_admin;
+});
 const parentData = inject("setorAtualData", {
   entradasItems: [],
 });
@@ -79,6 +84,7 @@ const handleEntradaRegistrada = async () => {
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-end gap-6">
       <Button
+        v-if="isAdmin"
         @click="dialogEntradaOpen = true"
         class="gap-2 shadow-lg shadow-primary/20"
       >

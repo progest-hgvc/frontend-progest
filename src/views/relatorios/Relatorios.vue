@@ -12,7 +12,7 @@
                   Central de Relatórios
                 </h3>
                 <p class="text-muted mb-0">
-                  Análises completas e exportações em tempo real do sistema ProGest
+                  Análises completas e exportações em tempo real do sistema ProGest HGVC
                 </p>
               </div>
               <div class="text-end">

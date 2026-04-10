@@ -76,6 +76,7 @@
               <div class="flex items-center gap-2">
                 <!-- Botão de Imprimir -->
                 <Button
+                  v-if="pedido.status_solicitacao === 'A'"
                   variant="ghost"
                   size="icon"
                   @click.stop="imprimirPedido(pedido)"
