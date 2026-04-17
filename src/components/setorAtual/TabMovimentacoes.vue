@@ -60,6 +60,7 @@ const loadingAprovacao = ref(false);
 const dialogCancelamentoOpen = ref(false);
 const movimentacaoParaCancelar = ref(null);
 const loadingCancelamento = ref(false);
+const previewLotesData = ref([]);
 
 // Filters
 const filterTipo = ref("todos");
@@ -140,17 +141,26 @@ const verDetalhes = (mov) => {
 
 const abrirModalAprovacao = async (mov) => {
   movimentacaoParaAprovar.value = mov;
+  previewLotesData.value = [];
   loadingAprovacao.value = true;
   try {
+    const authHeader = { Authorization: "Bearer " + store.getters.getUserToken };
+    const [estoqueResponse, previewResponse] = await Promise.allSettled([
+      axios.get(`/estoque/setor/${props.setorId}`, { headers: authHeader }),
+      axios.get(`/movimentacao/${mov.id}/preview-lotes`, { headers: authHeader }),
+    ]);
+
     let estoqueMap = {};
-    const response = await axios.get(`/estoque/setor/${props.setorId}`, {
-      headers: { Authorization: "Bearer " + store.getters.getUserToken },
-    });
-    if (response.data.success && response.data.data.estoque) {
-      response.data.data.estoque.forEach((e) => {
+    if (estoqueResponse.status === "fulfilled" && estoqueResponse.value.data.success && estoqueResponse.value.data.data.estoque) {
+      estoqueResponse.value.data.data.estoque.forEach((e) => {
         estoqueMap[e.produto?.id || e.produto_id] = e.quantidade_atual;
       });
     }
+
+    if (previewResponse.status === "fulfilled" && previewResponse.value.data.status) {
+      previewLotesData.value = previewResponse.value.data.data || [];
+    }
+
     itensParaAprovacao.value = (mov.itens || []).map((item) => ({
       ...item,
       quantidade_liberada:
@@ -780,6 +790,80 @@ const cancelarMovimentacao = async () => {
                 Alguns itens possuem quantidade a liberar superior ao seu
                 estoque atual. Ajuste os valores antes de prosseguir.
               </p>
+            </div>
+          </div>
+
+          <!-- Lot Preview (FIFO) -->
+          <div v-if="previewLotesData.length > 0" class="space-y-3">
+            <h3
+              class="text-xs font-black uppercase text-slate-400 tracking-widest px-1 flex items-center gap-2"
+            >
+              <CalendarIcon class="w-4 h-4" /> Lotes que serão consumidos (FIFO — mais antigo primeiro)
+            </h3>
+
+            <!-- No-coverage warning -->
+            <div
+              v-if="previewLotesData.some((p) => p.quantidade_sem_cobertura > 0)"
+              class="p-4 bg-amber-50 rounded-2xl border border-amber-200 flex items-start gap-3"
+            >
+              <AlertCircleIcon class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div class="space-y-1">
+                <p class="text-sm font-black text-amber-900 leading-none">
+                  Cobertura insuficiente em lotes
+                </p>
+                <p class="text-xs text-amber-800">
+                  Alguns produtos não possuem saldo suficiente registrado em
+                  lotes para cobrir a quantidade solicitada. O estoque agregado
+                  será deduzido, mas verifique a consistência dos lotes.
+                </p>
+              </div>
+            </div>
+
+            <div
+              v-for="preview in previewLotesData"
+              :key="preview.produto_id"
+              class="bg-white border rounded-2xl overflow-hidden shadow-sm"
+            >
+              <div class="px-5 py-3 bg-slate-50 border-b flex items-center justify-between">
+                <p class="text-xs font-black text-slate-700 uppercase tracking-wide">
+                  {{ preview.produto_nome }}
+                </p>
+                <Badge
+                  v-if="preview.quantidade_sem_cobertura > 0"
+                  variant="warning"
+                  class="text-[9px] font-black"
+                >
+                  Sem cobertura: {{ preview.quantidade_sem_cobertura }}
+                </Badge>
+              </div>
+              <table class="w-full text-xs">
+                <thead class="bg-slate-50/60 border-b">
+                  <tr>
+                    <th class="py-2 px-5 text-left font-bold text-slate-400 text-[10px]">Lote</th>
+                    <th class="py-2 px-5 text-center font-bold text-slate-400 text-[10px]">Vencimento</th>
+                    <th class="py-2 px-5 text-center font-bold text-slate-400 text-[10px]">Qtd disponível</th>
+                    <th class="py-2 px-5 text-center font-bold text-slate-400 text-[10px]">Qtd a usar</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y">
+                  <tr
+                    v-for="lote in preview.lotes_a_consumir"
+                    :key="lote.lote_id"
+                    class="hover:bg-slate-50/50"
+                  >
+                    <td class="py-3 px-5 font-bold text-slate-800">{{ lote.lote || "—" }}</td>
+                    <td class="py-3 px-5 text-center text-slate-600">
+                      {{ lote.data_vencimento ? new Date(lote.data_vencimento).toLocaleDateString('pt-BR') : "—" }}
+                    </td>
+                    <td class="py-3 px-5 text-center">
+                      <Badge variant="secondary" class="font-black text-[10px]">{{ lote.quantidade_disponivel }}</Badge>
+                    </td>
+                    <td class="py-3 px-5 text-center">
+                      <Badge class="font-black text-[10px] bg-emerald-100 text-emerald-800 border-emerald-200">{{ lote.quantidade_a_usar }}</Badge>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

@@ -48,7 +48,7 @@
                 type="text"
                 v-model="searchQuery"
                 @input="filterProducts"
-                placeholder="Pesquise por um produto..."
+                placeholder="Filtrar por nome, código..."
               />
             </div>
             <Button
@@ -64,25 +64,20 @@
       </CardContent>
     </Card>
 
-    <!-- Alert: Nenhum tipo selecionado -->
-    <div v-if="!tipoLocal" class="text-center py-8 text-muted-foreground">
-      <i class="mdi mdi-information-outline text-4xl mb-2 block"></i>
-      <p>Selecione o tipo de produto para começar a buscar itens.</p>
-    </div>
-
     <!-- Loading Indicator -->
     <div v-if="loading" class="flex justify-center items-center py-8">
       <LoadingSpinner size="lg" />
     </div>
 
     <!-- Products List -->
-    <div v-if="tipoLocal && !loading" class="space-y-3">
+    <div v-if="!loading" class="space-y-3">
       <div
-        v-if="filteredProducts.length === 0 && searchQuery"
+        v-if="filteredProducts.length === 0"
         class="text-center py-8 text-muted-foreground"
       >
         <i class="mdi mdi-magnify-close text-4xl mb-2 block"></i>
-        <p>Nenhum produto encontrado para "{{ searchQuery }}".</p>
+        <p v-if="searchQuery">Nenhum produto encontrado para "{{ searchQuery }}".</p>
+        <p v-else>Nenhum produto disponível para este tipo.</p>
       </div>
 
       <Card
@@ -213,7 +208,7 @@ const { toast } = useToast();
 
 const { tipo, itens, quantidadeProdutos, setTipo, addItem } = useSolicitacao();
 
-const tipoLocal = ref(tipo.value || null);
+const tipoLocal = ref(tipo.value || "Medicamento");
 const searchQuery = ref("");
 const products = ref([]);
 const loading = ref(false);
@@ -278,10 +273,12 @@ const fetchProducts = async () => {
   try {
     const token = localStorage.getItem("token");
     const response = await axios.post(
-      "/produtos/listByTipo",
+      "/produtos/list",
       {
-        tipo: tipoLocal.value,
-        per_page: 20,
+        filters: { tipo_produto: tipoLocal.value, status: "A" },
+        sort_by: "nome",
+        sort_dir: "asc",
+        per_page: 50,
         page: currentPage.value,
       },
       { headers: { Authorization: `Bearer ${token}` } }
@@ -289,12 +286,13 @@ const fetchProducts = async () => {
 
     if (response.data.status) {
       const data = response.data.data;
+      const lista = Array.isArray(data) ? data : data.data || [];
       if (currentPage.value === 1) {
-        products.value = data.data || data;
+        products.value = lista;
       } else {
-        products.value = [...products.value, ...(data.data || data)];
+        products.value = [...products.value, ...lista];
       }
-      hasMoreProducts.value = data.current_page < data.last_page;
+      hasMoreProducts.value = !Array.isArray(data) && data.current_page < data.last_page;
     }
   } catch (error) {
     console.error("Erro ao buscar produtos:", error);
@@ -339,7 +337,9 @@ const goToCheckout = () => {
 onMounted(() => {
   if (tipo.value) {
     tipoLocal.value = tipo.value;
-    fetchProducts();
+  } else {
+    setTipo("Medicamento");
   }
+  fetchProducts();
 });
 </script>
