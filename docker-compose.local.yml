@@ -1,0 +1,23 @@
+services:
+  # --- Frontend Vue.js ---
+  progest-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: "http://${APP_DOMAIN:-app.localhost}/api"
+    image: progest-web:latest
+    networks:
+      - traefik-public
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.progest-web.rule=Host(`${APP_DOMAIN:-app.localhost}`)"
+      - "traefik.http.routers.progest-web.entrypoints=web"
+      - "traefik.http.services.progest-web.loadbalancer.server.port=80"
+
+# --- Networks ---
+networks:
+  traefik-public:
+    external: true
+    name: traefik-public

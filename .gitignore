@@ -31,3 +31,5 @@ coverage
 
 .agente
 .env
+.env.*
+!.env.example

@@ -7,3 +7,6 @@ dist
 .github
 .azure
 *.local
+.env
+.env.*
+!.env.example

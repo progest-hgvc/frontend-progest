@@ -5,19 +5,19 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: "https://hgvcprogest-api.davidjunior.dev.br/api"
+        # Pega a URL construída baseada no host da máquina e embute no SPA
+        VITE_API_URL: "https://${APP_DOMAIN}/api"
     image: progest-web:latest
     networks:
       - traefik-public
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      # Configuração do DOMÍNIO DO FRONTEND
-      - "traefik.http.routers.progest-web.rule=Host(`hgvcprogest.davidjunior.dev.br`)"
+      # Configuração Unificada de Domínio Seguro de Produção
+      - "traefik.http.routers.progest-web.rule=Host(`${APP_DOMAIN}`)"
       - "traefik.http.routers.progest-web.entrypoints=websecure"
       - "traefik.http.routers.progest-web.tls=true"
       - "traefik.http.routers.progest-web.tls.certresolver=myresolver"
-      # Porta interna onde o frontend roda (80)
       - "traefik.http.services.progest-web.loadbalancer.server.port=80"
 
 # --- Networks ---
